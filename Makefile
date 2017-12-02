@@ -10,8 +10,11 @@ curl.o: curl.c
 pow_c.o: pow_c.c
 	gcc -Wall -g -c -o $@ $<
 
-trinary_test: trinary.o trinary_test.c constants.o curl.o pow_c.o
-	gcc -Wall -g  -o $@ $^ -lpthread
+pow_sse.o: pow_sse.c
+	gcc -Wall -g -c -o $@ $<
+
+trinary_test: trinary.o trinary_test.c constants.o curl.o pow_sse.o
+	gcc -Wall -DSSE -g  -o $@ $^ -lpthread
 
 
 main: main.c trinary.o
