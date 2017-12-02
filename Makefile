@@ -13,9 +13,15 @@ pow_c.o: pow_c.c
 pow_sse.o: pow_sse.c
 	gcc -Wall -g -c -o $@ $<
 
-trinary_test: trinary.o trinary_test.c constants.o curl.o pow_sse.o
-	gcc -Wall -DSSE -g  -o $@ $^ -lpthread
+C_test: trinary.o trinary_test.c constants.o curl.o pow_c.o
+	gcc -Wall -DC -g  -o $@ $^ -lpthread
 
+SSE_test: trinary.o trinary_test.c constants.o curl.o pow_sse.o
+	gcc -Wall -DSSE -g -o $@ $^ -lpthread
+
+test: C_test SSE_test
+	./C_test
+	./SSE_test
 
 main: main.c trinary.o
 	gcc -Wall -g -o $@ $^
