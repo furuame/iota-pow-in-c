@@ -85,7 +85,7 @@ static Trytes *TritstoTrytes(Trits *thiz)
     init_Trytes(&ret);
 
     /* Prepare array passing to Trytes */
-    char *tyt = malloc(thiz->len / 3);
+    char *tyt = (char *) malloc(thiz->len / 3);
 
     for (int i = 0; i < thiz->len / 3; i++) {
         char *curr = thiz->data;
@@ -162,7 +162,7 @@ static Trits *TrytestoTrits(Trytes *thiz)
     init_Trits(&ret);
 
     /* Prepare array passing to Trits */
-    char *tyt = malloc(thiz->len * 3);
+    char *tyt = (char *) malloc(thiz->len * 3);
 
     for (int i = 0; i < thiz->len; i++) {
         int idx = string_index(TryteAlphabet, thiz->data[i], 27);

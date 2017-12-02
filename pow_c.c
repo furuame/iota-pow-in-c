@@ -218,7 +218,7 @@ Trytes *PowC(Trytes *trytes, int mwm)
 
     Trits *tr = trytes->toTrits(trytes);
 
-    char *c_state = malloc(c->state->len);
+    char *c_state = (char *) malloc(c->state->len);
     /* Prepare an array storing tr[transactionTrinarySize - HashSize:] */
     for (int i = 0; i < tr->len - (transactionTrinarySize - HashSize); i++) {
         int idx = transactionTrinarySize - HashSize + i;
@@ -241,7 +241,7 @@ Trytes *PowC(Trytes *trytes, int mwm)
     for (int i = 0; i < num_cpu; i++) {
         pitem[i].mid = c_state;
         pitem[i].mwm = mwm;
-        pitem[i].nonce = nonce_array[i] = malloc(NonceTrinarySize);
+        pitem[i].nonce = nonce_array[i] = (char *) malloc(NonceTrinarySize);
         pitem[i].n = 0;
         pitem[i].ret = 0;
         pthread_create(&threads[i], NULL, pworkThread, (void *) &pitem[i]);
