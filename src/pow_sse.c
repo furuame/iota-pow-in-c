@@ -68,7 +68,7 @@ void transform128(__m128i *lmid, __m128i *hmid)
 		lto = lswap;
 		hto = hswap;
 	}
-	for (j = 0; j < HASH_LENGTH; j++) {
+	for (int j = 0; j < HASH_LENGTH; j++) {
 		t1 = indices[j];
 		t2 = indices[j + 1];
 		alpha = lfrom[t1];
