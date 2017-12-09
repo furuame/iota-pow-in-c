@@ -10,4 +10,5 @@ OpenCL version is still in progress.
 
 ## Usage
 ```$ mkdir build```
+
 ```$ make test```
