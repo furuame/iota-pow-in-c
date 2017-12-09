@@ -13,9 +13,6 @@ char tryteToTritsMappings[][3] = {
      {0, -1, 0}, {1, -1, 0}, {-1, 0, 0}
 };
 
-//char TryteAlphabet[] = "9ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-
 static void isValid_Trits(Trits *thiz)
 {
     for (int i = 0; i < thiz->len; i++) {

@@ -117,6 +117,7 @@ long long int loop_cpu(unsigned long *lmid, unsigned long *hmid, int m, char *no
         memcpy(hcpy, hmid, STATE_LENGTH * sizeof(long));
         transform64(lcpy, hcpy);
         if ((n = check(lcpy + STATE_LENGTH, hcpy + STATE_LENGTH, m)) >= 0) {
+            printf("loop: %d\n", i);
             seri(lmid, hmid, n, nonce);
             return i * 64;
         }
@@ -229,7 +230,7 @@ Trytes *PowC(Trytes *trytes, int mwm)
         c_state[i] = c->state->data[i];
     }
     
-    int num_cpu = get_nprocs_conf();
+    int num_cpu = get_nprocs_conf() - 1;
     pthread_t *threads = (pthread_t *) malloc(sizeof(pthread_t) * num_cpu);
     Pwork_struct *pitem = (Pwork_struct *) malloc(sizeof(Pwork_struct) * num_cpu);
     /* Prepare nonce to each thread */
@@ -242,7 +243,7 @@ Trytes *PowC(Trytes *trytes, int mwm)
         pitem[i].mid = c_state;
         pitem[i].mwm = mwm;
         pitem[i].nonce = nonce_array[i] = (char *) malloc(NonceTrinarySize);
-        pitem[i].n = 0;
+        pitem[i].n = i;
         pitem[i].ret = 0;
         pthread_create(&threads[i], NULL, pworkThread, (void *) &pitem[i]);
     }

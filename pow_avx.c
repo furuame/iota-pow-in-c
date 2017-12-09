@@ -329,8 +329,7 @@ Trytes *PowAVX(Trytes *trytes, int mwm)
     }
     */
     
-    int num_cpu = get_nprocs_conf();
-    num_cpu = 1;
+    int num_cpu = get_nprocs_conf() - 1;
     pthread_t *threads = (pthread_t *) malloc(sizeof(pthread_t) * num_cpu);
     Pwork_struct *pitem = (Pwork_struct *) malloc(sizeof(Pwork_struct) * num_cpu);
     /* Prepare nonce to each thread */
@@ -344,7 +343,7 @@ Trytes *PowAVX(Trytes *trytes, int mwm)
         pitem[i].mid = c->state->data;
         pitem[i].mwm = mwm;
         pitem[i].nonce = nonce_array[i] = (char *) malloc(HashSize);
-        pitem[i].n = 0;
+        pitem[i].n = i;
         pitem[i].ret = 0;
         pthread_create(&threads[i], NULL, pworkThread, (void *) &pitem[i]);
     }

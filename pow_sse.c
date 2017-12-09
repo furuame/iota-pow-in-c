@@ -282,7 +282,7 @@ Trytes *PowSSE(Trytes *trytes, int mwm)
         c_state[i] = c->state->data[i];
     }
     
-    int num_cpu = get_nprocs_conf();
+    int num_cpu = get_nprocs_conf() - 1;
     pthread_t *threads = (pthread_t *) malloc(sizeof(pthread_t) * num_cpu);
     Pwork_struct *pitem = (Pwork_struct *) malloc(sizeof(Pwork_struct) * num_cpu);
     /* Prepare nonce to each thread */
@@ -295,7 +295,7 @@ Trytes *PowSSE(Trytes *trytes, int mwm)
         pitem[i].mid = c_state;
         pitem[i].mwm = mwm;
         pitem[i].nonce = nonce_array[i] = (char *) malloc(NonceTrinarySize);
-        pitem[i].n = 0;
+        pitem[i].n = i;
         pitem[i].ret = 0;
         pthread_create(&threads[i], NULL, pworkThread, (void *) &pitem[i]);
     }
