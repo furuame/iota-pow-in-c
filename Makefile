@@ -1,34 +1,39 @@
-constants.o: constants.c
-	gcc -Wall -g -c -o $@ $<
+CC ?= gcc
+CFLAGS_common ?= -Wall -Os -std=gnu99
+SRC ?= ./src
+OUT ?= ./build
 
-trinary.o: trinary.c
-	gcc -Os -Wall -g -c -o $@ $<
+$(OUT)/constants.o: $(SRC)/constants.c $(SRC)/constants.h
+	$(CC) $(CFLAGS_common) -c -o $@ $<
 
-curl.o: curl.c
-	gcc -Os -Wall -g -c -o $@ $<
+$(OUT)/trinary.o: $(SRC)/trinary.c $(SRC)/trinary.h
+	$(CC) $(CFLAGS_common) -c -o $@ $<
 
-pow_c.o: pow_c.c
-	gcc -Os -Wall -g -c -o $@ $<
+$(OUT)/curl.o: $(SRC)/curl.c $(SRC)/curl.h
+	$(CC) $(CFLAGS_common) -c -o $@ $<
 
-pow_sse.o: pow_sse.c
-	gcc -Os -Wall -g -msse2 -c -o $@ $<
+$(OUT)/pow_c.o: $(SRC)/pow_c.c $(SRC)/pow_c.h
+	$(CC) $(CFLAGS_common) -c -o $@ $<
 
-pow_avx.o: pow_avx.c
-	gcc -Os -Wall -g -mavx -mavx2 -c -o $@ $<
+$(OUT)/pow_sse.o: $(SRC)/pow_sse.c $(SRC)/pow_sse.h
+	$(CC) $(CFLAGS_common) -msse2 -c -o $@ $<
 
-C_test: trinary.o trinary_test.c constants.o curl.o pow_c.o
-	gcc -Wall -Os -DC -g  -o $@ $^ -lpthread
+$(OUT)/pow_avx.o: $(SRC)/pow_avx.c $(SRC)/pow_avx.h
+	$(CC) $(CFLAGS_common) -mavx -mavx2 -c -o $@ $<
 
-SSE_test: trinary.o trinary_test.c constants.o curl.o pow_sse.o
-	gcc -Wall -Os -msse2 -DSSE -g -o $@ $^ -lpthread
+pow_c: $(OUT)/trinary.o $(SRC)/trinary_test.c $(OUT)/constants.o $(OUT)/curl.o $(OUT)/pow_c.o
+	$(CC) $(CFLAGS_common) -DC -o $@ $^ -lpthread
 
-AVX_test: trinary.o trinary_test.c constants.o curl.o pow_avx.o
-	gcc -Wall -Os -mavx -mavx2 -DAVX -g -o $@ $^ -lpthread
+pow_sse: $(OUT)/trinary.o $(SRC)/trinary_test.c $(OUT)/constants.o $(OUT)/curl.o $(OUT)/pow_sse.o
+	$(CC) $(CFLAGS_common) -msse2 -DSSE -g -o $@ $^ -lpthread
 
-test: C_test SSE_test AVX_test
-	./C_test
-	./SSE_test
-	./AVX_test
+pow_avx: $(OUT)/trinary.o $(SRC)/trinary_test.c $(OUT)/constants.o $(OUT)/curl.o $(OUT)/pow_avx.o
+	$(CC) $(CFLAGS_common) -mavx -mavx2 -DAVX -g -o $@ $^ -lpthread
+
+test: pow_c pow_sse pow_avx
+	./pow_c
+	./pow_sse
+	./pow_avx
 
 clean:
-	rm *.o C_test SSE_test AVX_test
+	rm $(out)/*.o pow_c pow_sse pow_avx

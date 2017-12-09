@@ -356,8 +356,6 @@ Trytes *PowAVX(Trytes *trytes, int mwm)
     Trits *nonce = NULL;
     init_Trits(&nonce);
     nonce->toTrits(nonce, nonce_array[completedIndex], HashSize);
-    
-    printf("%s\n", nonce->toTrytes(nonce)->data);
 
     return nonce->toTrytes(nonce);
 }
