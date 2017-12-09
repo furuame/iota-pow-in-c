@@ -117,7 +117,6 @@ long long int loop_cpu(unsigned long *lmid, unsigned long *hmid, int m, char *no
         memcpy(hcpy, hmid, STATE_LENGTH * sizeof(long));
         transform64(lcpy, hcpy);
         if ((n = check(lcpy + STATE_LENGTH, hcpy + STATE_LENGTH, m)) >= 0) {
-            printf("loop: %d\n", i);
             seri(lmid, hmid, n, nonce);
             return i * 64;
         }

@@ -207,7 +207,6 @@ int loop256(__m256d *lmid, __m256d *hmid, int m, char *nonce)
     transform256(lcpy, hcpy);
     if ((n = check256(lcpy + STATE_LENGTH, hcpy + STATE_LENGTH, m)) >= 0)
     {
-      printf("loop: %d\n", i);
       seri256(lmid, hmid, n, nonce);
       return i * 256;
     }
