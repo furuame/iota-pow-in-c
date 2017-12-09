@@ -37,19 +37,12 @@ static void Transform(Curl *thiz)
 static Trytes *Squeeze(Curl *thiz)
 {
     /* Get trits[:HashSize] to a array */
-    /*
     char tyt[HashSize] = {0};
+    
     for (int i = 0; i < HashSize; i++) {
         tyt[i] = thiz->state->data[i];
     }
-    Trytes *ret = NULL;
-    init_Trytes(&ret);
-    ret->toTrytes(ret, tyt, HashSize);
-    */
-    char tyt[HashSize] = {0};
-    for (int i = 0; i < HashSize; i++) {
-        tyt[i] = thiz->state->data[i];
-    }
+    
     Trits *ret = NULL;
     init_Trits(&ret);
     ret->toTrits(ret, tyt, HashSize);
@@ -65,7 +58,7 @@ static void Absorb(Curl *thiz, Trytes *inn)
 
     for (int i = 0; i < in->len; i += lenn) {
         lenn = 243;
-        if (in->len - 1 < 243) {
+        if (in->len - i < 243) {
             lenn = in->len - i;
         }
         /* Copy from in[i, i + lenn] to thiz->state */
