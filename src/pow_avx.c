@@ -75,199 +75,186 @@ pthread_mutex_t mutex;
 
 void transform256(__m256d *lmid, __m256d *hmid)
 {
-  __m256d one = _mm256_set_pd(HBITS, HBITS,HBITS,HBITS);
-  int j, r, t1, t2;
-  __m256d alpha, beta, gamma, delta,ngamma;
-  __m256d *lto = lmid + STATE_LENGTH, *hto = hmid + STATE_LENGTH;
-  __m256d *lfrom = lmid, *hfrom = hmid;
-  for (r = 0; r < 26; r++)
-  {
-    for (j = 0; j < STATE_LENGTH; j++)
-    {
-      t1 = indices___[j];
-      t2 = indices___[j + 1];
-      alpha = lfrom[t1];
-      beta = hfrom[t1];
-      gamma = hfrom[t2];
-      ngamma = _mm256_andnot_pd(gamma,one);
-     delta =  _mm256_and_pd(_mm256_or_pd(alpha,ngamma), _mm256_xor_pd(lfrom[t2],beta)); //(alpha | (~gamma)) & (lfrom[t2] ^ beta);
-      lto[j] = _mm256_andnot_pd(delta,one);  //~delta;
-      hto[j] = _mm256_or_pd(_mm256_xor_pd(alpha,gamma),delta); //(alpha ^ gamma) | delta;
+    __m256d one = _mm256_set_pd(HBITS, HBITS,HBITS,HBITS);
+    int t1, t2;
+    __m256d alpha, beta, gamma, delta,ngamma;
+    __m256d *lto = lmid + STATE_LENGTH, *hto = hmid + STATE_LENGTH;
+    __m256d *lfrom = lmid, *hfrom = hmid;
+
+    for (int r = 0; r < 26; r++) {
+        for (int j = 0; j < STATE_LENGTH; j++) {
+            t1 = indices___[j];
+            t2 = indices___[j + 1];
+            alpha = lfrom[t1];
+            beta = hfrom[t1];
+            gamma = hfrom[t2];
+            ngamma = _mm256_andnot_pd(gamma,one);
+            delta =  _mm256_and_pd(_mm256_or_pd(alpha,ngamma), _mm256_xor_pd(lfrom[t2],beta)); //(alpha | (~gamma)) & (lfrom[t2] ^ beta);
+            lto[j] = _mm256_andnot_pd(delta,one);  //~delta;
+            hto[j] = _mm256_or_pd(_mm256_xor_pd(alpha,gamma),delta); //(alpha ^ gamma) | delta;
+        }
+        __m256d *lswap = lfrom, *hswap = hfrom;
+        lfrom = lto;
+        hfrom = hto;
+        lto = lswap;
+        hto = hswap;
     }
-    __m256d *lswap = lfrom, *hswap = hfrom;
-    lfrom = lto;
-    hfrom = hto;
-    lto = lswap;
-    hto = hswap;
-  }
-  for (j = 0; j < HASH_LENGTH; j++)
-  {
-    t1 = indices___[j];
-    t2 = indices___[j + 1];
-    alpha = lfrom[t1];
-    beta = hfrom[t1];
-    gamma = hfrom[t2];
-      ngamma = _mm256_andnot_pd(gamma,one);
-     delta =  _mm256_and_pd(_mm256_or_pd(alpha,ngamma), _mm256_xor_pd(lfrom[t2],beta)); //(alpha | (~gamma)) & (lfrom[t2] ^ beta);
-      lto[j] = _mm256_andnot_pd(delta,one);  //~delta;
-      hto[j] = _mm256_or_pd(_mm256_xor_pd(alpha,gamma),delta); //(alpha ^ gamma) | delta;
-  }
+    for (int j = 0; j < HASH_LENGTH; j++) {
+        t1 = indices___[j];
+        t2 = indices___[j + 1];
+        alpha = lfrom[t1];
+        beta = hfrom[t1];
+        gamma = hfrom[t2];
+        ngamma = _mm256_andnot_pd(gamma,one);
+        delta =  _mm256_and_pd(_mm256_or_pd(alpha,ngamma), _mm256_xor_pd(lfrom[t2],beta)); //(alpha | (~gamma)) & (lfrom[t2] ^ beta);
+        lto[j] = _mm256_andnot_pd(delta,one);  //~delta;
+        hto[j] = _mm256_or_pd(_mm256_xor_pd(alpha,gamma),delta); //(alpha ^ gamma) | delta;
+    }
 }
+
 int incr256(__m256d *mid_low, __m256d *mid_high)
 {
-  int i;
-  __m256d carry;
-  carry = _mm256_set_pd(LBITS, LBITS,LBITS,LBITS);
-  for (i = 6; i < HASH_LENGTH && (i == 6 || carry[0]); i++)
-  {
-    __m256d low = mid_low[i], high = mid_high[i];
-    mid_low[i] = _mm256_xor_pd(high, low);
-    mid_high[i] = low;
-    carry =  _mm256_andnot_pd(low,high); //high & (~low);
-  }
-  return i == HASH_LENGTH;
+    int i;
+    __m256d carry = _mm256_set_pd(LBITS, LBITS,LBITS,LBITS);
+
+    for (i = 6; i < HASH_LENGTH && (i == 6 || carry[0]); i++) {
+        __m256d low = mid_low[i], high = mid_high[i];
+        mid_low[i] = _mm256_xor_pd(high, low);
+        mid_high[i] = low;
+        carry =  _mm256_andnot_pd(low,high); //high & (~low);
+    }
+
+    return i == HASH_LENGTH;
 }
+
 void seri256(__m256d *low, __m256d *high, int n, char *r)
 {
-  int i = 0, index = 0;
-  if (n > 63 && n<128)
-  {
-    n -= 64;
-    index = 1;
-  }
-  if (n >= 128 && n<192)
-  {
-    n -= 128;
-    index = 2;
-  }
-  if (n >= 192 && n<256)
-  {
-    n -=  192;
-    index = 3;
-  }
-  for (i = 0; i < HASH_LENGTH; i++)
-  {
-    long long l= ((dl)low[i][index]).l;
-    long long h= ((dl)high[i][index]).l;
-    long ll = (l >> n) & 1;
-    long hh = (h >> n) & 1;
-    if (hh == 0 && ll == 1)
-    {
-      r[i] = -1;
+    int index = 0;
+    
+    if (n > 63 && n < 128) {
+        n -= 64;
+        index = 1;
     }
-    if (hh == 1 && ll == 1)
-    {
-      r[i] = 0;
+    if (n >= 128 && n < 192) {
+        n -= 128;
+        index = 2;
     }
-    if (hh == 1 && ll == 0)
-    {
-      r[i] = 1;
+    if (n >= 192 && n < 256) {
+        n -=  192;
+        index = 3;
     }
-  }
+    
+    for (int i = 0; i < HASH_LENGTH; i++)
+    {
+        long long l = ((dl)low[i][index]).l;
+        long long h = ((dl)high[i][index]).l;
+        long ll = (l >> n) & 1;
+        long hh = (h >> n) & 1;
+        if (hh == 0 && ll == 1) {
+            r[i] = -1;
+        }
+        if (hh == 1 && ll == 1) {
+            r[i] = 0;
+        }
+        if (hh == 1 && ll == 0) {
+            r[i] = 1;
+        }
+    }
 }
+
 int check256(__m256d *l, __m256d *h, int m)
 {
-  int i, j; //omit init for speed
-  __m256d nonce_probe = _mm256_set_pd(HBITS, HBITS,HBITS,HBITS);
-  for (i = HASH_LENGTH - m; i < HASH_LENGTH; i++)
-  {
-    nonce_probe =_mm256_andnot_pd(_mm256_xor_pd(l[i],h[i]),nonce_probe);   //&= ~(l[i] ^ h[i]);
-    if (nonce_probe[0] == LBITS && nonce_probe[1] == LBITS && nonce_probe[2] == LBITS && nonce_probe[3] == LBITS)
-    {
-      return -1;
+    __m256d nonce_probe = _mm256_set_pd(HBITS, HBITS,HBITS,HBITS);
+    
+    for (int i = HASH_LENGTH - m; i < HASH_LENGTH; i++) {
+        nonce_probe =_mm256_andnot_pd(_mm256_xor_pd(l[i],h[i]),nonce_probe);   //&= ~(l[i] ^ h[i]);
+        if (nonce_probe[0] == LBITS && nonce_probe[1] == LBITS && nonce_probe[2] == LBITS && nonce_probe[3] == LBITS) {
+            return -1;
+        }
     }
-  }
-  for (j = 0; j < 3; j++)
-  {
-    for (i = 0; i < 64; i++)
-    {
-      long long np= ((dl)nonce_probe[j]).l;
-      if ( (np >> i) & 1)
-      {
-        return i + j * 64;
-      }
+    for (int j = 0; j < 3; j++) {
+        for (int i = 0; i < 64; i++) {
+            long long np= ((dl)nonce_probe[j]).l;
+            if ( (np >> i) & 1) {
+                return i + j * 64;
+            }
+        }
     }
-  }
-  return -2;
+    return -2;
 }
 
 int stopAVX = 1;
 
 int loop256(__m256d *lmid, __m256d *hmid, int m, char *nonce)
 {
-  int i = 0, n = 0, j = 0;
-  __m256d lcpy[STATE_LENGTH * 2], hcpy[STATE_LENGTH * 2];
-  for (i = 0; !incr256(lmid, hmid) && !stopAVX; i++)
-  {
-    for (j = 0; j < STATE_LENGTH; j++)
-    {
-      lcpy[j] = lmid[j];
-      hcpy[j] = hmid[j];
+    int i = 0, n = 0;
+    __m256d lcpy[STATE_LENGTH * 2], hcpy[STATE_LENGTH * 2];
+    
+    for (i = 0; !incr256(lmid, hmid) && !stopAVX; i++) {
+        for (int j = 0; j < STATE_LENGTH; j++) {
+            lcpy[j] = lmid[j];
+            hcpy[j] = hmid[j];
+        }
+        transform256(lcpy, hcpy);
+        if ((n = check256(lcpy + STATE_LENGTH, hcpy + STATE_LENGTH, m)) >= 0) {
+            seri256(lmid, hmid, n, nonce);
+            return i * 256;
+        }
     }
-    transform256(lcpy, hcpy);
-    if ((n = check256(lcpy + STATE_LENGTH, hcpy + STATE_LENGTH, m)) >= 0)
-    {
-      seri256(lmid, hmid, n, nonce);
-      return i * 256;
-    }
-  }
-  return -i*256-1;
+    return -i * 256 - 1;
 }
+
 // 01:-1 11:0 10:1
 void para256(char in[], __m256d l[], __m256d h[])
 {
-  int i = 0;
-  for (i = 0; i < STATE_LENGTH; i++)
-  {
-    switch (in[i])
-    {
-    case 0:
-      l[i] = _mm256_set_pd(HBITS, HBITS,HBITS,HBITS);
-      h[i] = _mm256_set_pd(HBITS, HBITS,HBITS,HBITS);
-      break;
-    case 1:
-      l[i] = _mm256_set_pd(LBITS, LBITS,LBITS,LBITS);
-      h[i] = _mm256_set_pd(HBITS, HBITS,HBITS,HBITS);
-      break;
-    case -1:
-      l[i] =_mm256_set_pd(HBITS, HBITS,HBITS,HBITS);
-      h[i] =  _mm256_set_pd(LBITS, LBITS,LBITS,LBITS);
-      break;
+    for (int i = 0; i < STATE_LENGTH; i++) {
+        switch (in[i]) {
+            case 0:
+                l[i] = _mm256_set_pd(HBITS, HBITS, HBITS, HBITS);
+                h[i] = _mm256_set_pd(HBITS, HBITS, HBITS, HBITS);
+                break;
+            case 1:
+                l[i] = _mm256_set_pd(LBITS, LBITS, LBITS, LBITS);
+                h[i] = _mm256_set_pd(HBITS, HBITS, HBITS, HBITS);
+                break;
+            case -1:
+                l[i] = _mm256_set_pd(HBITS, HBITS, HBITS, HBITS);
+                h[i] = _mm256_set_pd(LBITS, LBITS, LBITS, LBITS);
+                break;
+        }
     }
-  }
 }
+
 void incrN256(int n,__m256d *mid_low, __m256d *mid_high)
 {
-  int i,j;
-  for (j=0;j<n;j++){
-    __m256d carry;
-    carry =_mm256_set_pd(HBITS, HBITS,HBITS,HBITS);
-    for (i = HASH_LENGTH * 2 / 3; i < HASH_LENGTH &&  carry[0]; i++)
-    {
-      __m256d low = mid_low[i], high = mid_high[i];
-      mid_low[i] = _mm256_xor_pd(high, low);
-      mid_high[i] = low;
-      carry = _mm256_andnot_pd(low,high);// high & (~low);
+    for (int j = 0; j < n; j++){
+        __m256d carry =_mm256_set_pd(HBITS, HBITS, HBITS, HBITS);
+        
+        for (int i = HASH_LENGTH * 2 / 3; i < HASH_LENGTH && carry[0]; i++) {
+            __m256d low = mid_low[i], high = mid_high[i];
+            mid_low[i] = _mm256_xor_pd(high, low);
+            mid_high[i] = low;
+            carry = _mm256_andnot_pd(low,high); // high & (~low);
+        }
     }
-  }
 }
 
 int pwork256(char mid[], int mwm, char nonce[],int n)
 {
     __m256d lmid[STATE_LENGTH], hmid[STATE_LENGTH];
     para256(mid, lmid, hmid);
-    lmid[0] = _mm256_set_pd(LOW00, LOW01,LOW02,LOW03);
-    hmid[0] = _mm256_set_pd(HIGH00, HIGH01,HIGH02,HIGH03);
-    lmid[1] = _mm256_set_pd(LOW10, LOW11,LOW12,LOW13);
-    hmid[1] = _mm256_set_pd(HIGH10,HIGH11,HIGH12,HIGH13);
-    lmid[2] = _mm256_set_pd(LOW20, LOW21,LOW22,LOW23);
-    hmid[2] = _mm256_set_pd(HIGH20,HIGH21,HIGH32,HIGH23);
-    lmid[3] = _mm256_set_pd(LOW30, LOW31,LOW32,LOW33);
-    hmid[3] = _mm256_set_pd(HIGH30,HIGH31,HIGH32,HIGH33);
-    lmid[4] = _mm256_set_pd(LOW40, LOW41,LOW42,LOW43);
-    hmid[4] = _mm256_set_pd(HIGH40,HIGH41,HIGH42,HIGH43);
-    lmid[5] = _mm256_set_pd(LOW50, LOW51,LOW52,LOW53);
-    hmid[5] = _mm256_set_pd(HIGH50,HIGH51,HIGH52,HIGH53);
+    lmid[0] = _mm256_set_pd(LOW00, LOW01, LOW02, LOW03);
+    hmid[0] = _mm256_set_pd(HIGH00, HIGH01, HIGH02, HIGH03);
+    lmid[1] = _mm256_set_pd(LOW10, LOW11, LOW12, LOW13);
+    hmid[1] = _mm256_set_pd(HIGH10, HIGH11, HIGH12, HIGH13);
+    lmid[2] = _mm256_set_pd(LOW20, LOW21, LOW22, LOW23);
+    hmid[2] = _mm256_set_pd(HIGH20, HIGH21, HIGH32, HIGH23);
+    lmid[3] = _mm256_set_pd(LOW30, LOW31, LOW32, LOW33);
+    hmid[3] = _mm256_set_pd(HIGH30, HIGH31, HIGH32, HIGH33);
+    lmid[4] = _mm256_set_pd(LOW40, LOW41, LOW42, LOW43);
+    hmid[4] = _mm256_set_pd(HIGH40, HIGH41, HIGH42, HIGH43);
+    lmid[5] = _mm256_set_pd(LOW50, LOW51, LOW52, LOW53);
+    hmid[5] = _mm256_set_pd(HIGH50, HIGH51, HIGH52, HIGH53);
     incrN256(n, lmid, hmid);
     return loop256(lmid, hmid, mwm, nonce);
 }
@@ -292,7 +279,6 @@ void *pworkThread(void *pitem)
     pthread_mutex_unlock(&mutex);
     pthread_exit(NULL);
 }
-
 
 Trytes *PowAVX(Trytes *trytes, int mwm)
 {
