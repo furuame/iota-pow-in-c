@@ -1,5 +1,6 @@
 #include "clcontext.h"
 #include <stdio.h>
+#include "pearl.cl.h"
 
 void init_cl_devices(CLContext *ctx)
 {
@@ -15,11 +16,11 @@ void init_cl_devices(CLContext *ctx)
     }
 
     // We only need one Platform
-    clGetPlatformIDs(1, &platform, NUL);
+    clGetPlatformIDs(1, &platform, NULL);
 
     // Get Device IDs
     cl_uint platform_num_device;
-    if (clGetDeviceIDs(platform, CLDEVICE_TYPE_GPU, 1, &ctx->device, &platform_num_device) != CL_SUCCESS) {
+    if (clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &ctx->device, &platform_num_device) != CL_SUCCESS) {
         printf("Failed to get OpenCL Device IDs for platform.\n");
         exit(0);
     }
@@ -39,7 +40,7 @@ void init_cl_devices(CLContext *ctx)
 
     // Get Device Info (max_memory)
     if (CL_SUCCESS != clGetDeviceInfo(ctx->device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &ctx->max_memory, NULL)) {
-        printf("Failed to get Device info (max memory)!"\n);
+        printf("Failed to get Device info (max memory)!\n");
         exit(0);
     }
 
@@ -54,10 +55,9 @@ void init_cl_devices(CLContext *ctx)
         printf("Failed to create command queue\n");
         exit(0);
     }
-
-    return 1;
 }
 
+/*
 void init_cl_program(CLContext *ctx)
 {
     FILE *fin = fopen(KERNEL_PATH, "r");
@@ -85,8 +85,67 @@ void init_cl_program(CLContext *ctx)
         printf("Failed to build program\n");
         exit(0);
     }
+}
+*/
 
-    return 1;
+void init_cl_program(CLContext *ctx)
+{
+    cl_int errno;
+    unsigned char *src[] = {pearl_cl};
+    size_t size[] = {pearl_cl_len};
+
+    ctx->program = clCreateProgramWithSource(ctx->context, ctx->kernel_info.num_src, (const char **) src, size, &errno);
+    errno = clBuildProgram(ctx->program, 1, &ctx->device, "-Werror", NULL, NULL);
+}
+
+void init_cl_kernel(CLContext *ctx, char **kernel_name)
+{
+    cl_int errno;
+
+    for (int i = 0; i < ctx->kernel_info.num_kernels; i++) {
+        ctx->kernel[i] = clCreateKernel(ctx->program, kernel_name[i], &errno);
+        if(CL_SUCCESS != errno) {
+            printf("Failed to create kernel\n");
+            exit(0);
+        }
+    }
+}
+
+void init_cl_buffer(CLContext *ctx)
+{
+    cl_ulong mem = 0, max_mem = 0;
+    cl_int errno;
+
+    for (int i = 0; i < ctx->kernel_info.num_buffers; i++) {
+        mem = ctx->kernel_info.buffer_info[i].size;
+        if (ctx->kernel_info.buffer_info[i].init_flags & 0x10) {
+            mem *= ctx->num_cores * ctx->num_work_group;
+            if (mem > ctx->max_memory) {
+                int temp = ctx->max_memory / ctx->kernel_info.buffer_info[i].size;
+                ctx->num_cores = temp;
+                mem = temp * ctx->kernel_info.buffer_info[i].size;
+            }
+        }
+        // Check Memory bound  
+        max_mem += mem;
+        if (max_mem >= ctx->max_memory) {
+            printf("Max memory pass\n");
+            exit(0);
+        }
+        // Create OpenCL Buffer
+        ctx->buffer[i] = clCreateBuffer(ctx->context, ctx->kernel_info.buffer_info[i].flags, mem, NULL, &errno);
+        if (CL_SUCCESS != errno) {
+            printf("Failed to create Buffer\n");
+            exit(0);
+        }
+        // Set Kernel Arguments
+        for (int j = 0; j < ctx->kernel_info.num_kernels; j++) {
+            if (CL_SUCCESS != clSetKernelArg(ctx->kernel[j], i, sizeof(cl_mem), (void *) &ctx->buffer[i])) {
+                printf("Failed to set kernel argements\n");
+                exit(0);
+            }
+        }
+    }
 }
 
 int init_clcontext(CLContext **ctx)

@@ -10,11 +10,13 @@
 #define HALF_LENGTH 364
 #define HIGH_BITS 0xFFFFFFFFFFFFFFFF
 #define LOW_BITS 0x0000000000000000
-
+//#define HIGH_BITS
+//0b1111111111111111111111111111111111111111111111111111111111111111L
+//#define LOW_BITS
+//0b0000000000000000000000000000000000000000000000000000000000000000L
 /**
  * t1 = j == 0? 0:(((j - 1)%2)+1)*HALF_LENGTH - ((j-1)>>1);
  */
-
 __constant size_t INDEX[STATE_LENGTH + 1] = {
     0,   364, 728, 363, 727, 362, 726, 361, 725, 360, 724, 359, 723, 358, 722,
     357, 721, 356, 720, 355, 719, 354, 718, 353, 717, 352, 716, 351, 715, 350,
@@ -73,189 +75,189 @@ __constant size_t INDEX[STATE_LENGTH + 1] = {
 typedef long bc_trit_t;
 
 void increment(__global bc_trit_t* mid_low, __global bc_trit_t* mid_high,
-        __private size_t from_index, __private size_t to_index);
+               __private size_t from_index, __private size_t to_index);
 void copy_mid_to_state(__global bc_trit_t* mid_low, __global bc_trit_t* mid_high,
-        __global bc_trit_t* state_low, __global bc_trit_t* state_high,
-        __private size_t id, __private size_t l_size,
-        __private size_t l_trits);
+                       __global bc_trit_t* state_low, __global bc_trit_t* state_high,
+                       __private size_t id, __private size_t l_size,
+                       __private size_t l_trits);
 void transform(__global bc_trit_t* state_low, __global bc_trit_t* state_high,
-        __private size_t id, __private size_t l_size,
-        __private size_t l_trits);
+               __private size_t id, __private size_t l_size,
+               __private size_t l_trits);
 void check(__global bc_trit_t* state_low, __global bc_trit_t* state_high,
-        __global volatile char* found,
-        __constant size_t* min_weight_magnitude,
-        __global bc_trit_t* nonce_probe, __private size_t gr_id);
+           __global volatile char* found,
+           __constant size_t* min_weight_magnitude,
+           __global bc_trit_t* nonce_probe, __private size_t gr_id);
 void setup_ids(__private size_t* id, __private size_t* gid,
-        __private size_t* gr_id, __private size_t* l_size,
-        __private size_t* n_trits);
+               __private size_t* gr_id, __private size_t* l_size,
+               __private size_t* n_trits);
 
 void increment(__global bc_trit_t* mid_low, __global bc_trit_t* mid_high,
-        __private size_t from_index, __private size_t to_index) {
-    size_t i;
-    bc_trit_t carry = 1;
-    bc_trit_t low, hi;
-    for (i = from_index; i < to_index && carry != 0; i++) {
-        low = mid_low[i];
-        hi = mid_high[i];
-        mid_low[i] = hi ^ low;
-        mid_high[i] = low;
-        carry = hi & (~low);
-    }
+               __private size_t from_index, __private size_t to_index) {
+  size_t i;
+  bc_trit_t carry = 1;
+  bc_trit_t low, hi;
+  for (i = from_index; i < to_index && carry != 0; i++) {
+    low = mid_low[i];
+    hi = mid_high[i];
+    mid_low[i] = hi ^ low;
+    mid_high[i] = low;
+    carry = hi & (~low);
+  }
 }
 
 void copy_mid_to_state(__global bc_trit_t* mid_low, __global bc_trit_t* mid_high,
-        __global bc_trit_t* state_low, __global bc_trit_t* state_high,
-        __private size_t id, __private size_t l_size,
-        __private size_t n_trits) {
-    size_t i, j;
-    for (i = 0; i < n_trits; i++) {
-        j = id + i * l_size;
-        state_low[j] = mid_low[j];
-        state_high[j] = mid_high[j];
-    }
+                       __global bc_trit_t* state_low, __global bc_trit_t* state_high,
+                       __private size_t id, __private size_t l_size,
+                       __private size_t n_trits) {
+  size_t i, j;
+  for (i = 0; i < n_trits; i++) {
+    j = id + i * l_size;
+    state_low[j] = mid_low[j];
+    state_high[j] = mid_high[j];
+  }
 }
 
 void transform(__global bc_trit_t* state_low, __global bc_trit_t* state_high,
-        __private size_t id, __private size_t l_size,
-        __private size_t n_trits) {
-    __private size_t round, i, j, k;
-    __private bc_trit_t alpha, beta, gamma, delta, sp_low[3], sp_high[3];
-    for (round = 0; round < NUMBER_OF_ROUNDS; round++) {
-        for (i = 0; i < n_trits; i++) {
-            j = id + i * l_size;
-            k = j+1;
-            alpha = state_low[INDEX[j]];
-            beta = state_high[INDEX[j]];
-            gamma = state_high[INDEX[k]];
-            delta = (alpha | (~gamma)) & (state_low[INDEX[k]] ^ beta);
+               __private size_t id, __private size_t l_size,
+               __private size_t n_trits) {
+  __private size_t round, i, j, k;
+  __private bc_trit_t alpha, beta, gamma, delta, sp_low[3], sp_high[3];
+  for (round = 0; round < NUMBER_OF_ROUNDS; round++) {
+    for (i = 0; i < n_trits; i++) {
+      j = id + i * l_size;
+      k = j+1;
+      alpha = state_low[INDEX[j]];
+      beta = state_high[INDEX[j]];
+      gamma = state_high[INDEX[k]];
+      delta = (alpha | (~gamma)) & (state_low[INDEX[k]] ^ beta);
 
-            sp_low[i] = ~delta;
-            sp_high[i] = (alpha ^ gamma) | delta;
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-        for (i = 0; i < n_trits; i++) {
-            j = id + i * l_size;
-            state_low[j] = sp_low[i];
-            state_high[j] = sp_high[i];
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
+      sp_low[i] = ~delta;
+      sp_high[i] = (alpha ^ gamma) | delta;
     }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    for (i = 0; i < n_trits; i++) {
+      j = id + i * l_size;
+      state_low[j] = sp_low[i];
+      state_high[j] = sp_high[i];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
 }
 
 void check(__global bc_trit_t* state_low, __global bc_trit_t* state_high,
-        __global volatile char* found,
-        __constant size_t* min_weight_magnitude,
-        __global bc_trit_t* nonce_probe, __private size_t gr_id) {
-    int i;
-    *nonce_probe = HIGH_BITS;
-    for (i = HASH_LENGTH - *min_weight_magnitude; i < HASH_LENGTH; i++) {
-        *nonce_probe &= ~(state_low[i] ^ state_high[i]);
-        if (*nonce_probe == 0)
-            return;
-    }
-    if (*nonce_probe != 0) {
-        //*nonce_probe = 1 << __builtin_ctzl(*nonce_probe);
-        *found = gr_id + 1;
-    }
+           __global volatile char* found,
+           __constant size_t* min_weight_magnitude,
+           __global bc_trit_t* nonce_probe, __private size_t gr_id) {
+  int i;
+  *nonce_probe = HIGH_BITS;
+  for (i = HASH_LENGTH - *min_weight_magnitude; i < HASH_LENGTH; i++) {
+    *nonce_probe &= ~(state_low[i] ^ state_high[i]);
+    if (*nonce_probe == 0)
+      return;
+  }
+  if (*nonce_probe != 0) {
+    //*nonce_probe = 1 << __builtin_ctzl(*nonce_probe);
+    *found = gr_id + 1;
+  }
 }
 
 void setup_ids(__private size_t* id, __private size_t* gid,
-        __private size_t* gr_id, __private size_t* l_size,
-        __private size_t* n_trits) {
-    __private size_t l_rem;
-    *id = get_local_id(0);
-    *l_size = get_local_size(0);
-    *gr_id = get_global_id(0) / *l_size;
-    *gid = *gr_id * STATE_LENGTH;
-    l_rem = STATE_LENGTH % *l_size;
-    *n_trits = STATE_LENGTH / *l_size;
-    *n_trits += l_rem == 0 ? 0 : 1;
-    *n_trits -= (*n_trits) * (*id) < STATE_LENGTH ? 0 : 1;
+               __private size_t* gr_id, __private size_t* l_size,
+               __private size_t* n_trits) {
+  __private size_t l_rem;
+  *id = get_local_id(0);
+  *l_size = get_local_size(0);
+  *gr_id = get_global_id(0) / *l_size;
+  *gid = *gr_id * STATE_LENGTH;
+  l_rem = STATE_LENGTH % *l_size;
+  *n_trits = STATE_LENGTH / *l_size;
+  *n_trits += l_rem == 0 ? 0 : 1;
+  *n_trits -= (*n_trits) * (*id) < STATE_LENGTH ? 0 : 1;
 }
 
 __kernel void init(__global char* trit_hash, __global bc_trit_t* mid_low,
-        __global bc_trit_t* mid_high, __global bc_trit_t* state_low,
-        __global bc_trit_t* state_high,
-        __constant size_t* min_weight_magnitude,
-        __global volatile char* found, __global bc_trit_t* nonce_probe,
-        __constant size_t* loop_count) {
-    __private size_t i, j, id, gid, gr_id, gl_off, l_size, n_trits;
-    setup_ids(&id, &gid, &gr_id, &l_size, &n_trits);
-    gl_off = get_global_offset(0);
+                   __global bc_trit_t* mid_high, __global bc_trit_t* state_low,
+                   __global bc_trit_t* state_high,
+                   __constant size_t* min_weight_magnitude,
+                   __global volatile char* found, __global bc_trit_t* nonce_probe,
+                   __constant size_t* loop_count) {
+  __private size_t i, j, id, gid, gr_id, gl_off, l_size, n_trits;
+  setup_ids(&id, &gid, &gr_id, &l_size, &n_trits);
+  gl_off = get_global_offset(0);
 
-    if (id == 0 && gr_id == 0) {
-        *found = 0;
+  if (id == 0 && gr_id == 0) {
+    *found = 0;
+  }
+
+  if (gr_id == 0)
+    return;
+
+  for (i = 0; i < n_trits; i++) {
+    j = id + i * l_size;
+    mid_low[gid + j] = mid_low[j];
+    mid_high[gid + j] = mid_high[j];
+  }
+
+  if (id == 0) {
+    for (i = 0; i < gr_id + gl_off; i++) {
+      increment(&(mid_low[gid]), &(mid_high[gid]), NONCE_INIT_START,
+                NONCE_INCREMENT_START);
     }
-
-    if (gr_id == 0)
-        return;
-
-    for (i = 0; i < n_trits; i++) {
-        j = id + i * l_size;
-        mid_low[gid + j] = mid_low[j];
-        mid_high[gid + j] = mid_high[j];
-    }
-
-    if (id == 0) {
-        for (i = 0; i < gr_id + gl_off; i++) {
-            increment(&(mid_low[gid]), &(mid_high[gid]), NONCE_INIT_START,
-                    NONCE_INCREMENT_START);
-        }
-    }
+  }
 }
 
 __kernel void search(__global char* trit_hash, __global bc_trit_t* mid_low,
-        __global bc_trit_t* mid_high, __global bc_trit_t* state_low,
-        __global bc_trit_t* state_high,
-        __constant size_t* min_weight_magnitude,
-        __global volatile char* found,
-        __global bc_trit_t* nonce_probe,
-        __constant size_t* loop_count) {
-    __private size_t i, id, gid, gr_id, l_size, n_trits;
-    setup_ids(&id, &gid, &gr_id, &l_size, &n_trits);
+                     __global bc_trit_t* mid_high, __global bc_trit_t* state_low,
+                     __global bc_trit_t* state_high,
+                     __constant size_t* min_weight_magnitude,
+                     __global volatile char* found,
+                     __global bc_trit_t* nonce_probe,
+                     __constant size_t* loop_count) {
+  __private size_t i, id, gid, gr_id, l_size, n_trits;
+  setup_ids(&id, &gid, &gr_id, &l_size, &n_trits);
 
-    for (i = 0; i < *loop_count; i++) {
-        if (id == 0)
-            increment(&(mid_low[gid]), &(mid_high[gid]), NONCE_INCREMENT_START,
-                    HASH_LENGTH);
+  for (i = 0; i < *loop_count; i++) {
+    if (id == 0)
+      increment(&(mid_low[gid]), &(mid_high[gid]), NONCE_INCREMENT_START,
+                HASH_LENGTH);
 
-        barrier(CLK_LOCAL_MEM_FENCE);
-        copy_mid_to_state(&(mid_low[gid]), &(mid_high[gid]), &(state_low[gid]),
-                &(state_high[gid]), id, l_size, n_trits);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    copy_mid_to_state(&(mid_low[gid]), &(mid_high[gid]), &(state_low[gid]),
+                      &(state_high[gid]), id, l_size, n_trits);
 
-        barrier(CLK_LOCAL_MEM_FENCE);
-        transform(&(state_low[gid]), &(state_high[gid]), id, l_size, n_trits);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    transform(&(state_low[gid]), &(state_high[gid]), id, l_size, n_trits);
 
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if (id == 0)
-            check(&(state_low[gid]), &(state_high[gid]), found, min_weight_magnitude,
-                    &(nonce_probe[gr_id]), gr_id);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (id == 0)
+      check(&(state_low[gid]), &(state_high[gid]), found, min_weight_magnitude,
+            &(nonce_probe[gr_id]), gr_id);
 
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if (*found != 0)
-            break;
-    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (*found != 0)
+      break;
+  }
 }
 
 __kernel void finalize(__global char* trit_hash, __global bc_trit_t* mid_low,
-        __global bc_trit_t* mid_high, __global bc_trit_t* state_low,
-        __global bc_trit_t* state_high,
-        __constant size_t* min_weight_magnitude,
-        __global volatile char* found,
-        __global bc_trit_t* nonce_probe,
-        __constant size_t* loop_count) {
-    __private size_t i, j, id, gid, gr_id, l_size, n_trits;
-    setup_ids(&id, &gid, &gr_id, &l_size, &n_trits);
+                       __global bc_trit_t* mid_high, __global bc_trit_t* state_low,
+                       __global bc_trit_t* state_high,
+                       __constant size_t* min_weight_magnitude,
+                       __global volatile char* found,
+                       __global bc_trit_t* nonce_probe,
+                       __constant size_t* loop_count) {
+  __private size_t i, j, id, gid, gr_id, l_size, n_trits;
+  setup_ids(&id, &gid, &gr_id, &l_size, &n_trits);
 
-    if (gr_id == (size_t)(*found - 1) && nonce_probe[gr_id] != 0) {
-        for (i = 0; i < n_trits; i++) {
-            j = id + i * l_size;
-            if (j < HASH_LENGTH) {
-                trit_hash[j] =
-                    (mid_low[gid + j] & nonce_probe[gr_id]) == 0
-                    ? 1
-                    : (mid_high[gid + j] & nonce_probe[gr_id]) == 0 ? -1 : 0;
-            }
-        }
+  if (gr_id == (size_t)(*found - 1) && nonce_probe[gr_id] != 0) {
+    for (i = 0; i < n_trits; i++) {
+      j = id + i * l_size;
+      if (j < HASH_LENGTH) {
+        trit_hash[j] =
+            (mid_low[gid + j] & nonce_probe[gr_id]) == 0
+                ? 1
+                : (mid_high[gid + j] & nonce_probe[gr_id]) == 0 ? -1 : 0;
+      }
     }
+  }
 }

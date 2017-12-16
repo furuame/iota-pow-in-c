@@ -1,12 +1,15 @@
 #ifndef CLCONTEXT_H_
 #define CLCONTEXT_H_
 
+#include <CL/cl.h>
+
 #define MAX_NUM_BUFFERS 9
 #define MAX_NUM_KERNEL 3
 
 typedef struct {
     size_t size;
     cl_mem_flags flags;
+    size_t init_flags;
 } BufferInfo;
 
 typedef struct {
@@ -30,9 +33,11 @@ typedef struct {
     KernelInfo kernel_info;
 } CLContext;
 
-int init_clcontext(CLContext *ctx);
+int init_clcontext(CLContext **ctx);
+void init_cl_kernel(CLContext *ctx, char **kernel_name);
+void init_cl_buffer(CLContext *ctx);
 
-#define KERNEL_PATH "./pow_kernel.cl"
+#define KERNEL_PATH "src/pow_kernel.cl"
 #define MAX_SOURCE_SIZE (0x100000)
 
 #endif
