@@ -9,6 +9,8 @@
 #include "pow_sse.h"
 #elif AVX
 #include "pow_avx.h"
+#elif CL
+#include "pow_cl.h"
 #endif
 
 #include <stdio.h>
@@ -48,6 +50,7 @@ int main()
     Trytes *nonce = PowAVX(tx, 15);
 #endif
 
+#ifndef CL
     /* Preparing concatenate two string */
     int rst_len = tx->len - NonceTrinarySize / 3 + nonce->len;
     char *rst = (char *) malloc(rst_len);
@@ -65,6 +68,11 @@ int main()
     last->toTrytes(last, rst, rst_len);
 
     Trytes *last_result = last->Hash(last);
+#elif CL
+    printf("Test pow_cl\n");
+    Trytes *ret = PowCL(tx, 14);
+    Trytes *last_result = ret->Hash(ret);
+#endif
 
     printf("Trytes: %s\n", last_result->data);
 

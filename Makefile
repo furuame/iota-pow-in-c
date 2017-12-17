@@ -24,6 +24,9 @@ $(OUT)/pow_avx.o: $(SRC)/pow_avx.c $(SRC)/pow_avx.h
 $(OUT)/pow_cl.o: $(SRC)/pow_cl.c $(SRC)/pow_cl.h
 	$(CC) $(CFLAGS_common) -c -o $@ $<
 
+$(OUT)/clcontext.o: $(SRC)/clcontext.c $(SRC)/clcontext.h
+	$(CC) $(CFLAGS_common) -c -o $@ $<
+
 pow_c: $(OUT)/trinary.o $(SRC)/trinary_test.c $(OUT)/constants.o $(OUT)/curl.o $(OUT)/pow_c.o
 	$(CC) $(CFLAGS_common) -DC -o $@ $^ -lpthread
 
@@ -33,13 +36,14 @@ pow_sse: $(OUT)/trinary.o $(SRC)/trinary_test.c $(OUT)/constants.o $(OUT)/curl.o
 pow_avx: $(OUT)/trinary.o $(SRC)/trinary_test.c $(OUT)/constants.o $(OUT)/curl.o $(OUT)/pow_avx.o
 	$(CC) $(CFLAGS_common) -mavx -mavx2 -DAVX -g -o $@ $^ -lpthread
 
-test_cl: $(SRC)/clcontext.h $(SRC)/clcontext.c $(SRC)/test_cl.c $(OUT)/constants.o $(OUT)/curl.o $(OUT)/pow_cl.o $(OUT)/trinary.o
-	$(CC) $(CFLAGS_common) -g -L~/workspace/ccurl/build/deps/libopencl-stup/lib -o $@ $^ -lOpenCL
+pow_cl: $(OUT)/trinary.o $(OUT)/clcontext.o $(SRC)/trinary_test.c $(OUT)/constants.o $(OUT)/curl.o $(OUT)/pow_cl.o
+	$(CC) $(CFLAGS_common) -DCL -g -L/usr/local/lib/ -L/usr/local/cuda-9.0/lib64/ -o $@ $^ -lOpenCL
 
-test: pow_c pow_sse pow_avx
+test: pow_c pow_sse pow_avx pow_cl
 	./pow_c
 	./pow_sse
 	./pow_avx
+	./pow_cl
 
 clean:
-	rm $(out)/*.o pow_c pow_sse pow_avx
+	rm $(OUT)/*.o pow_c pow_sse pow_avx

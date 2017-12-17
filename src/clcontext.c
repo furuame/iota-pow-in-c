@@ -1,6 +1,5 @@
 #include "clcontext.h"
 #include <stdio.h>
-#include "pearl.cl.h"
 
 void init_cl_devices(CLContext *ctx)
 {
@@ -57,7 +56,7 @@ void init_cl_devices(CLContext *ctx)
     }
 }
 
-/*
+
 void init_cl_program(CLContext *ctx)
 {
     FILE *fin = fopen(KERNEL_PATH, "r");
@@ -86,8 +85,9 @@ void init_cl_program(CLContext *ctx)
         exit(0);
     }
 }
-*/
 
+
+/*
 void init_cl_program(CLContext *ctx)
 {
     cl_int errno;
@@ -97,6 +97,7 @@ void init_cl_program(CLContext *ctx)
     ctx->program = clCreateProgramWithSource(ctx->context, ctx->kernel_info.num_src, (const char **) src, size, &errno);
     errno = clBuildProgram(ctx->program, 1, &ctx->device, "-Werror", NULL, NULL);
 }
+*/
 
 void init_cl_kernel(CLContext *ctx, char **kernel_name)
 {
@@ -118,7 +119,7 @@ void init_cl_buffer(CLContext *ctx)
 
     for (int i = 0; i < ctx->kernel_info.num_buffers; i++) {
         mem = ctx->kernel_info.buffer_info[i].size;
-        if (ctx->kernel_info.buffer_info[i].init_flags & 0x10) {
+        if (ctx->kernel_info.buffer_info[i].init_flags & 2) {
             mem *= ctx->num_cores * ctx->num_work_group;
             if (mem > ctx->max_memory) {
                 int temp = ctx->max_memory / ctx->kernel_info.buffer_info[i].size;

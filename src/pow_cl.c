@@ -94,12 +94,12 @@ char *pwork(char *state, int mwm)
     while (local_work_size > titan->num_work_group) {
         local_work_size /= 3;
     }
+
     global_work_size = local_work_size * num_groups;
     
     int64_t mid_low[STATE_LENGTH] = {0}, mid_high[STATE_LENGTH] = {0};
     init_state(state, mid_low, mid_high, HASH_LENGTH - NONCE_LENGTH);
     
-    printf("global_offset = %d\n global_work_size = %d\n local_work_size = %d\n", global_offset, global_work_size, local_work_size);
 
     write_cl_buffer(titan, mid_low, mid_high, mwm, 32);
 
@@ -137,9 +137,6 @@ char *pwork(char *state, int mwm)
             printf("Reading buf failed\n");
             exit(0);
         }
-        for (int i = 0; i < HASH_LENGTH; i++) {
-            printf("buf[%d] = %d\n", i, buf[i]);
-        }
     }
     clReleaseEvent(ev);
     return buf;
@@ -175,13 +172,6 @@ Trytes *PowCL(Trytes *trytes, int mwm)
     
     char *ret = pwork(c_state, mwm);
     
-    Trits *nonce = NULL;
-    init_Trits(&nonce);
-    nonce->toTrits(nonce, ret, HASH_LENGTH);
-    Trytes *nonce_trytes = nonce->toTrytes(nonce);
-    printf("%s\n", nonce_trytes->data);
-
     memcpy(&tr->data[TRANSACTION_LENGTH - HASH_LENGTH], ret, HASH_LENGTH * sizeof(char));
-    printf("%s\n", tr->toTrytes(tr)->data);
     return tr->toTrytes(tr);
 }
