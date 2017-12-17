@@ -2,6 +2,7 @@ CC ?= gcc
 CFLAGS_common ?= -Wall -Os -std=gnu99
 SRC ?= ./src
 OUT ?= ./build
+OPENCL_LIB ?= /usr/local/cuda-9.0/lib64/
 
 $(OUT)/constants.o: $(SRC)/constants.c $(SRC)/constants.h
 	$(CC) $(CFLAGS_common) -c -o $@ $<
@@ -37,7 +38,7 @@ pow_avx: $(OUT)/trinary.o $(SRC)/trinary_test.c $(OUT)/constants.o $(OUT)/curl.o
 	$(CC) $(CFLAGS_common) -mavx -mavx2 -DAVX -g -o $@ $^ -lpthread
 
 pow_cl: $(OUT)/trinary.o $(OUT)/clcontext.o $(SRC)/trinary_test.c $(OUT)/constants.o $(OUT)/curl.o $(OUT)/pow_cl.o
-	$(CC) $(CFLAGS_common) -DCL -g -L/usr/local/lib/ -L/usr/local/cuda-9.0/lib64/ -o $@ $^ -lOpenCL
+	$(CC) $(CFLAGS_common) -DCL -g -L/usr/local/lib/ -L$(OPENCL_LIB) -o $@ $^ -lOpenCL
 
 test: pow_c pow_sse pow_avx pow_cl
 	./pow_c
