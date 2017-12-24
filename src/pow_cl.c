@@ -88,6 +88,8 @@ char *pwork(char *state, int mwm)
     init_cl_kernel(titan, kernel_name);
     init_BufferInfo(titan);
 
+    printf("test - num_cores: %d, max_mem: %d\n", titan->num_cores, titan->max_memory);
+
     global_offset = 0;
     num_groups = titan->num_cores;
     local_work_size = STATE_LENGTH;

@@ -133,6 +133,7 @@ void init_cl_buffer(CLContext *ctx)
             printf("Max memory pass\n");
             exit(0);
         }
+        printf("buffer %d need size: %d\n", i, mem);
         // Create OpenCL Buffer
         ctx->buffer[i] = clCreateBuffer(ctx->context, ctx->kernel_info.buffer_info[i].flags, mem, NULL, &errno);
         if (CL_SUCCESS != errno) {
